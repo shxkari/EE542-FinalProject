@@ -16,7 +16,7 @@ plot.ion()
 ydata = [0]*50
 ax1 = plot.axes()
 line, = plot.plot(ydata)
-plot.ylim ([0,32000]) #sets y range from 10 to 40
+plot.ylim ([0:32000]) #sets y range from 10 to 40
 
 while True:
 	# Read a line and strip whitespace from it
@@ -32,4 +32,3 @@ while True:
 		line.set_ydata(ydata) # update the data
 		#update the plot
 		plot.draw() 
-  
