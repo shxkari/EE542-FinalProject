@@ -31,7 +31,7 @@ print("RECORDING AUDIO")
 t_end = time.time() + 3
 while time.time() < t_end:
     line=ser.readline().rstrip()
-    print(line)
+    #print(line)
     data.append(line.decode('utf-8'))
     #data.append(parse_line(line))
     
@@ -42,8 +42,8 @@ print("DONE")
 myrecording = np.array(data)
 for i in myrecording:
     print(i)
-#recording =np.asfarray(myrecording,float)
-#write('output.wav', fs, myrecording)  # Save as WAV file 
+myrecording =np.asfarray(myrecording,float)
+write('output.wav', fs, myrecording)  # Save as WAV file 
 
 
 file_name = "output.wav"
@@ -52,7 +52,7 @@ print(myrecording)
 
 
 # write('output.wav', fs, myrecording)  # Save as WAV file 
-'''
+
 # unpickling the pickles
 loaded_model = pickle.load(open('CNN_model.pickle', 'rb'))
 le = pickle.load(open('LE.pickle', 'rb'))
@@ -86,6 +86,6 @@ def print_prediction(data):
 
 print_prediction(myrecording)
 
+ser.close()
 
 
-'''
