@@ -22,8 +22,12 @@ ydata = [0]*50
 ax1 = plot.axes()
 line, = plot.plot(ydata)
 plot.ylim ([0,32000]) #sets y range from 10 to 40
+<<<<<<< HEAD
 #plot.style.use('fivethirtyeight')
 #def animate(i):
+=======
+
+>>>>>>> e0f04b11bbe133f15f2e4527007eaec6be9e9f7d
 while True:
 	print("reached while\n")
 	# Read a line and strip whitespace from it
