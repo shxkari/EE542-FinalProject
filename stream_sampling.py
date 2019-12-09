@@ -29,19 +29,19 @@ max_pad_len = 174
 
 def extract_features(data):
     mfccs = librosa.feature.mfcc(y=data, sr=SAMPLING_RATE, n_mfcc=40)
-    print(mfccs.shape)
+    #print(mfccs.shape)
     pad_width = max_pad_len - mfccs.shape[1]
     mfccs = np.pad(mfccs, pad_width=((0, 0), (0, pad_width)), mode='constant')
     return mfccs
 
-def print_prediction(data, loaded_model, le):
+def print_prediction(id, data, loaded_model, le):
 
     prediction_feature = extract_features(data) 
     prediction_feature = prediction_feature.reshape(1, num_rows, num_columns, num_channels)
-    print(prediction_feature)
+    #print(prediction_feature)
     predicted_vector = loaded_model.predict_classes(prediction_feature)
     predicted_class = le.inverse_transform(predicted_vector) 
-    print("The predicted class is:", predicted_class[0], '\n') 
+    print("The predicted class for thread ",id," is:", predicted_class[0], '\n') 
     
     predicted_proba_vector = loaded_model.predict_proba(prediction_feature) 
     predicted_proba = predicted_proba_vector[0]
@@ -53,6 +53,7 @@ def print_prediction(data, loaded_model, le):
 def windowing(id,e_mine, e_other):
     loaded_model = pickle.load(open('CNN_model.pickle', 'rb'))
     le = pickle.load(open('LE.pickle', 'rb'))
+    print("************************ thread ID: ",id," *********************\n")
     e_mine.wait()
     while(1):
         flagready = 0
@@ -61,16 +62,16 @@ def windowing(id,e_mine, e_other):
         for i in range (SAMPLING_RATE * SECONDS_SAMPLED):
             data.append (0)
             if (i == SAMPLING_RATE * (SECONDS_SAMPLED - OVERLAP_TIME)):
-                e_mine.set()
+                e_other.set()
         myrecording = np.array(data, dtype=np.int16)
         myrecording = myrecording.reshape((myrecording.shape[0],1))
-        print(myrecording.shape)
+        #print(myrecording.shape)
         # myrecording =np.asfarray(myrecording,float)
         write('output.wav', SAMPLING_RATE, myrecording, )  # Save as WAV file 
         file_name = "output.wav"
         myrecording, sample_rate = librosa.load(file_name, res_type='kaiser_fast') 
-        print(myrecording)
-        print_prediction(myrecording, loaded_model, le)
+        #print(myrecording)
+        print_prediction(id, myrecording, loaded_model, le)
         e_other.wait()
         e_other.clear()
   
