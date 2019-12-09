@@ -12,7 +12,7 @@ import struct
 import os
 import subprocess
 
-
+'''
 
 
 SAMPLING_RATE = 22050
@@ -82,15 +82,6 @@ def windowing(id,e_mine, e_other):
         e_other.wait()
         e_other.clear()
   
-'''  
-def parse_line(in_line): 
-    data = in_line.split(',')
-    data = np.array(data)
-    print(data)
-    data = data.astype(np.int16)
-    print(data)
-    return data
-'''
 
 if __name__ == "__main__": 
 
@@ -117,3 +108,4 @@ if __name__ == "__main__":
 
 
 
+'''
