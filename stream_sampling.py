@@ -9,8 +9,13 @@ import numpy as np
 import time
 import threading
 import struct
+import os
+import subprocess
 
-SAMPLING_RATE = 22000
+
+
+
+SAMPLING_RATE = 22050
 SECONDS_SAMPLED = 4
 OVERLAP_TIME = 1
 
@@ -23,7 +28,6 @@ OVERLAP_TIME = 1
 num_rows = 40
 num_columns = 174
 num_channels = 1
-max_pad_len = 174
 
 # myrecording_1
 # myrecording_2
@@ -61,8 +65,9 @@ def windowing(id,e_mine, e_other):
         data = []
         #start sampling for how many seconds we want
         for i in range (SAMPLING_RATE * SECONDS_SAMPLED):
-            line = file.read(2)
-            data.append(struct.unpack("<H", data))
+            line = f.read(2)
+            print(struct.unpack("<H", data))
+            #data.append(struct.unpack("<H", data))
             if (i == SAMPLING_RATE * (SECONDS_SAMPLED - OVERLAP_TIME)):
                 e_other.set()
         myrecording = np.array(data, dtype=np.int16)
@@ -89,15 +94,22 @@ def parse_line(in_line):
 
 if __name__ == "__main__": 
 
-    e1 = threading.Event()
-    e2 = threading.Event()
-    t1_ID = 1
-    t2_ID = 2
-    t1 = threading.Thread(target=windowing, args=(t1_ID,e1,e2,))
-    t2 = threading.Thread(target=windowing, args=(t2_ID,e2,e1,))
-    e1.set()
-    t1.start()
-    t2.start()
+    if not os.path.exists("audio.fifo"):
+        print("CREATING FIFO")
+        os.mkfifo("audio.fifo")
+
+    with open("audio.fifo", "rb") as f:
+        
+
+        e1 = threading.Event()
+        e2 = threading.Event()
+        t1_ID = 1
+        t2_ID = 2
+        t1 = threading.Thread(target=windowing, args=(t1_ID,e1,e2,))
+        t2 = threading.Thread(target=windowing, args=(t2_ID,e2,e1,))
+        e1.set()
+        t1.start()
+        t2.start()
 
 
 
