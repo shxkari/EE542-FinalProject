@@ -14,7 +14,7 @@ seconds = 3  # Duration of recording
 myrecording = sd.rec(int(seconds * fs), samplerate=fs, channels=1, dtype=np.int16)
 print("RECORDING AUDIO")
 print(myrecording.dtype)
-
+print(myrecording.shape)
 print(myrecording)
 sd.wait()  # Wait until recording is finished
 print("DONE")
@@ -46,7 +46,7 @@ def print_prediction(data):
     prediction_feature = extract_features(data) 
     #print(prediction_feature)
     prediction_feature = prediction_feature.reshape(1, num_rows, num_columns, num_channels)
-    #print(prediction_feature)
+    print(prediction_feature.shape)
     predicted_vector = loaded_model.predict_classes(prediction_feature)
     predicted_class = le.inverse_transform(predicted_vector) 
     print("The predicted class is:", predicted_class[0], '\n') 
