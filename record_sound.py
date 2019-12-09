@@ -28,15 +28,11 @@ ser.baudrate = 115200
 data = []
 #myrecording = sd.rec(int(seconds * fs), samplerate=fs, channels=1)
 print("RECORDING AUDIO")
-#t_end = time.time() + 3
-line = "asdf"
-while len(line) > 1:
-    line=ser.readline()
-    while(len(line) > 0):
-        data.append(parse_line(line))
-        #line = ser.readline()
+t_end = time.time() + 3
+while time.time() < t_end:
+    line=ser.readline().rstrip()
     #print(line)
-    #data.append(line.decode('utf-8'))
+    data.append(line.decode('utf-8'))
     #data.append(parse_line(line))
     
 print("DONE")
