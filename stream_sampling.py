@@ -98,6 +98,10 @@ if __name__ == "__main__":
         print("CREATING FIFO")
         os.mkfifo("audio.fifo")
 
+    proc = subprocess.Popen('arecord -D hw:1,0 -f S16_LE -c 1 -r 22050 -t raw audio.fifo'.split(),
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT)
+
     with open("audio.fifo", "rb") as f:
         
 
