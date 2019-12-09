@@ -8,6 +8,7 @@ import librosa
 import numpy as np
 import time
 import threading
+import struct
 
 SAMPLING_RATE = 22000
 SECONDS_SAMPLED = 4
@@ -60,7 +61,8 @@ def windowing(id,e_mine, e_other):
         data = []
         #start sampling for how many seconds we want
         for i in range (SAMPLING_RATE * SECONDS_SAMPLED):
-            data.append (0)
+            line = file.read(2)
+            data.append(struct.unpack("<H", data))
             if (i == SAMPLING_RATE * (SECONDS_SAMPLED - OVERLAP_TIME)):
                 e_other.set()
         myrecording = np.array(data, dtype=np.int16)
