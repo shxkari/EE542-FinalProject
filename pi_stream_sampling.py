@@ -1,9 +1,7 @@
 import sounddevice as sd
 from scipy.io.wavfile import write
-import pickle
-import tensorflow as tf
 from sklearn.preprocessing import LabelEncoder
-from keras.utils import to_categorical
+import pickle
 import librosa
 import numpy as np
 import time
@@ -11,9 +9,9 @@ import threading
 import struct
 import os
 import subprocess
+import sys
 
 print("done importing")
-'''
 
 
 SAMPLING_RATE = 22050
@@ -57,56 +55,61 @@ def print_prediction(id, data, loaded_model, le):
 
 
 def windowing(id,e_mine, e_other):
+
     loaded_model = pickle.load(open('CNN_model.pickle', 'rb'))
     le = pickle.load(open('LE.pickle', 'rb'))
     print("************************ thread ID: ",id," *********************\n")
     e_mine.wait()
-    while(1):
-        flagready = 0
-        data = []
-        #start sampling for how many seconds we want
-        for i in range (SAMPLING_RATE * SECONDS_SAMPLED):
-            line = f.read(2)
-            print(struct.unpack("<H", data))
-            #data.append(struct.unpack("<H", data))
-            if (i == SAMPLING_RATE * (SECONDS_SAMPLED - OVERLAP_TIME)):
-                e_other.set()
-        myrecording = np.array(data, dtype=np.int16)
-        myrecording = myrecording.reshape((myrecording.shape[0],1))
-        #print(myrecording.shape)
-        # myrecording =np.asfarray(myrecording,float)
-        write('output.wav', SAMPLING_RATE, myrecording, )  # Save as WAV file 
-        file_name = "output.wav"
-        myrecording, sample_rate = librosa.load(file_name, res_type='kaiser_fast') 
-        #print(myrecording)
-        print_prediction(id, myrecording, loaded_model, le)
-        e_other.wait()
-        e_other.clear()
-  
-
+    with open("audio.fifo", "rb") as f:
+        while(1):
+            data = []
+            #start sampling for how many seconds we want
+            for i in range (SAMPLING_RATE * SECONDS_SAMPLED):
+                line = f.read(2)
+                print(sys.getsizeof(line) == 2,"************")
+                if(sys.getsizeof(line) == 2):
+                    #print("line read is: ", line, "************")
+                    #print(struct.unpack("<H", line))
+                    #data.append(0)
+                    data.append(struct.unpack("<H", line))
+                if (i == SAMPLING_RATE * (SECONDS_SAMPLED - OVERLAP_TIME)):
+                    e_other.set()
+            
+            myrecording = np.array(data, dtype=np.int16)
+            myrecording = myrecording.reshape((myrecording.shape[0],1))
+            #print(myrecording.shape)
+            # myrecording =np.asfarray(myrecording,float)
+            write('output.wav', SAMPLING_RATE, myrecording, )  # Save as WAV file 
+            file_name = "output.wav"
+            myrecording, sample_rate = librosa.load(file_name, res_type='kaiser_fast') 
+            #print(myrecording)
+            print_prediction(id, myrecording, loaded_model, le)
+            e_other.wait()
+            e_other.clear()
+      
 if __name__ == "__main__": 
-
+    
     if not os.path.exists("audio.fifo"):
         print("CREATING FIFO")
         os.mkfifo("audio.fifo")
-
     proc = subprocess.Popen('arecord -D hw:1,0 -f S16_LE -c 1 -r 22050 -t raw audio.fifo'.split(),
                             stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT)
 
-    with open("audio.fifo", "rb") as f:
-        
+    #f = os.open("audio.fifo", os.O_RDONLY|os.O_NONBLOCK)
+    print("fifo opened")
+    
+    e1 = threading.Event()
+    e2 = threading.Event()
+ 
+    t1_ID = 1
+    t2_ID = 2
+    t1 = threading.Thread(target=windowing, args=(t1_ID,e1,e2,))
+    t2 = threading.Thread(target=windowing, args=(t2_ID,e2,e1,))
+    
+    e1.set()
+    t1.start()
+    t2.start()
 
-        e1 = threading.Event()
-        e2 = threading.Event()
-        t1_ID = 1
-        t2_ID = 2
-        t1 = threading.Thread(target=windowing, args=(t1_ID,e1,e2,))
-        t2 = threading.Thread(target=windowing, args=(t2_ID,e2,e1,))
-        e1.set()
-        t1.start()
-        t2.start()
 
 
-
-'''
