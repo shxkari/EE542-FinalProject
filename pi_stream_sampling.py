@@ -27,7 +27,7 @@ OVERLAP_TIME = 1
 num_rows = 40
 num_columns = 174
 num_channels = 1
-
+max_pad_len = 174
 # myrecording_1
 # myrecording_2
 
@@ -66,8 +66,8 @@ def windowing(id,e_mine, e_other):
             #start sampling for how many seconds we want
             for i in range (SAMPLING_RATE * SECONDS_SAMPLED):
                 line = f.read(2)
-                print(sys.getsizeof(line) == 2,"************")
-                if(sys.getsizeof(line) == 2):
+                #print(sys.getsizeof(line) ,"************")
+                if(sys.getsizeof(line) == 19):
                     #print("line read is: ", line, "************")
                     #print(struct.unpack("<H", line))
                     #data.append(0)
