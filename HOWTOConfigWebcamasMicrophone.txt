@@ -1,0 +1,30 @@
+#Edit alsa config file as shown
+sudo nano /usr/share/alsa/alsa.conf 
+
+defaults.ctl.card 1
+defaults.pcm.card 1
+defaults.pcm.device 0
+defaults.pcm.subdevice 0
+
+#These card values are for USB Mic and Rpi's 3.5mm jack audio out.
+sudo nano ~/.asoundrc 
+
+pcm.!default {
+         type asym
+         playback.pcm {
+                 type plug
+                 slave.pcm "hw:0,0"
+         }
+         capture.pcm {
+                 type plug
+                 slave.pcm "hw:1,0"
+         } 
+ }
+
+ ctl.!default {
+        type hw
+        card 0
+}
+
+#Copy paste the above settings in asound.conf as well
+sudo nano /etc/asound.conf
