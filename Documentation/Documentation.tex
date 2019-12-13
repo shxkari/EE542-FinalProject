@@ -146,7 +146,7 @@ Initially, we were going to use the built in time stamps that go along with the 
 To fix this, we normalize the clock on the Raspberry Pi to the Master clock running on AWS. To do this, we send the Raspberry pi time almost instantaneously, and at least with equal delay at every node, to the conduit. There we calculate the time difference between that node’s time and the master time. We store this conversion factor in a lookup table, which allows for easy conversion to real time whenever we receive a Raspberry Pi time stamped message. The Raspberry Pi stamps a window with the time at which the peak sound (assumed to be the gunshot) was detected.
 
 \section{Machine Learning Model}
-We used a pretrained model called YAMNet. YAMNet is a pre-trained deep net that predicts an audio event class based on a the AudioSet-Youtube corpus (a massive collection of manually annotated audio samples). The following describes how YAMNet was trained: 
+We used a pretrained model called YAMNet  \cite{b6}. YAMNet is a pre-trained deep net that predicts an audio event class based on a the AudioSet-Youtube corpus (a massive collection of manually annotated audio samples). The following describes how YAMNet was trained: 
     All audio is resampled to 16kHz mono
     A spectrogram is computed using magnitudes of Short-Time Fourier Transform with a window size of 25ms, a window hop of 10ms, and a periodic Hann window
     A mel spectrogram is computed by mapping the spectrogram to 64 mel bins covering the range 125-7500Hz
