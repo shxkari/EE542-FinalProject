@@ -56,13 +56,13 @@ SafeDetect is a product developed over the course of the University of Southern 
 \section{Introduction}
 Gun violence has been steadily increasing over the past few decades \cite{b1}. When a person is shot they need urgent medical treatment in order to increase their chances of survival. In the absence of a gunshot detection system, this means that a good citizen must call in the gunshot if emergency services have any chance of helping the victim. This delay and reliance on human intervention can lead to a delay or complete absence of medical help. Almost any gunshot wound can become fatal if not treated quickly. 
 
-In this paper we propose SafeDetect as a solution accurately detecting gunshots and alerting the police. By removing the need for human detection and reporting, our system will lead to faster response times. This will help get emergency response to gunshot victims as quickly as possible. Our product works as a network system where multiple units collaborate to both detect gunshots and triangulate the location of the shooting. The results section clearly shows how quickly our system can detect a gunshot and alert the proper authorities. 
+The move for the future is audio based automatic gunshot detection \cite{b7}. In this paper we propose SafeDetect as a solution accurately detecting gunshots and alerting the police. By removing the need for human detection and reporting, our system will lead to faster response times. This will help get emergency response to gunshot victims as quickly as possible. Our product works as a network system where multiple units collaborate to both detect gunshots and triangulate the location of the shooting. The results section clearly shows how quickly our system can detect a gunshot and alert the proper authorities. 
 
 
 \subsection{Current Market}
 
 
-Smart gunshot detection systems are becoming increasingly common in urban cities \cite{b2}. Large cities like Los Angeles have a policing budget of over \$4 Billion. Many cities currently employ a gun detection system called ShotSpotter. This system is a first step in the right direction; however, their system has a high false positive rate and reporting delay of nearly one minute.  \cite{b3}. Despite these shortcomings, more than 90 cities around the world are using ShotSpotter.
+Smart gunshot detection systems are becoming increasingly common in urban cities \cite{b2}. Large cities like New York CIty have a policing budget of over \$4 Billion. Many cities currently employ a gun detection system called ShotSpotter. This system is a first step in the right direction; however, their system has a high false positive rate and reporting delay of nearly one minute.  \cite{b3}. Despite these shortcomings, more than 90 cities around the world are using ShotSpotter.
 
 Recently, Durham, North Carolina received a proposal from ShotSpotter to install gunshot detection technology in a three mile radius. Twenty to twenty-five sensors would be installed per square mile. The initial annual cost was estimated to be \$235,000 and then \$195,000 annually thereafter \cite{b4}.
 
@@ -105,8 +105,15 @@ Each node will have a unique identifier and three main physical components.
 
 \end{enumerate}
 
-The microphone is constantly recording audio and storing it in the Raspberry Pi. The Raspberry Pi will constantly check if audio amplitude exceeds a predefined threshold. This threshold was determined by analyzing audio data that could be considered noise and comparing it to gunshot audio data. 
-Once the threshold is surpassed, the audio data stored in the buffer will be windowed and sent through our machine learning model which outputs the predicted sound with corresponding levels of confidence. We have made use of multithreading so that we do not miss audio data while we are running a previous window through the machine learning model.
+Our original design included just the xDot and microphone sensor but we quickly found that the memory storage space was not sufficient for performing ML analysis on the edge. If predictions do not occur on the edge than our system would bbe required to constanly stream data to the cloud for near-real time detection. This is simply not realistic in terms of bandwidth usage, especially as our system scales up.  For this reason we implement a Raspberry Pi so we can do ML detection on the node.
+
+Our Raspberry Pi program sets the microphone to 16KHz sampling rate with 16 bit resolution and mono output. The program then reads the raw audio data stream into a buffer which stores up to 1 second of data. The buffer’s size remains constant and any new data that gets pushed in overrides the oldest data. As the data is read in, the program checks if audio amplitude exceeds a predefined threshold. This threshold was determined by analyzing audio data that could be considered noise and comparing it to gunshot audio data. 
+
+Once the threshold is surpassed, the audio data stored in the buffer will sent through the YAMNet machine learning model which outputs the top 5 predicted sounds out of the 512 possible labels. The model will also output the corresponding levels of confidence for each of the top predicted sounds. If gunshot is among the top 5, we trigger a gunshot detected event.  We have made use of multithreading so that we do not miss audio data while we are performing our prediction. 
+
+The ML algorithm takes about 0.4s to execute and during that time, data continues to be read. If the threshold is crossed while the data processing is taking place. The ML algorithm is immediately triggered after it is done completing. This can work continuously as long as the window duration is > 0.4s. If it is greater, then the event will be marked as missed and the ML algorithm will not be immediately triggered.
+
+There is an additional filter that we can apply to our gunshot detection algorithm to protect against falsely detected gunshots from fireworks \cite{b8}. Since fireworks occur over long periods of time, if fireworks have been detected in the recent past, it should be factored into the decision to report a gunshot. It works by keeping an exponentially weighted average of the N previous prediction confidences. If a gunshot is predicted for an instance in time, it will check against the weighted average for firework predictions, if the gunshot prediction confidence is higher, then report the gunshot, or else ignore it.
 
 If a gunshot was indeed heard than that information is sent to the xDot over a USB serial port. The xDot is running code that reads from its serial port, transmits the data via the sx1276 LoRa radio, and replies over the serial port when it is ready to send again. This handshake guarantees that the information about the detected gunshot is sent to the conduit.
 
@@ -138,7 +145,8 @@ Data from the conduit is passed over to IoT Core. In the IoT Core all messages s
 \end{figure}
 To pinpoint the location of the gunshot, we need to run a function. Lambda is perfect for this because it can be set to only activate based on a trigger. The trigger is a condition that, if met, calls the function, giving us our desired output. The trigger we set is that if a gunshot message is heard on IoT Core, activate the lambda function. Our function iteratively finds the three nodes that heard it the soonest and grabs the timestamp and EUI of the nodes. The location of the nodes is saved in a lookup table referenced by the EUI. By using the EUIs, we can find the GPS location of the nodes that heard the gunshot. The GPS location is in standard WGS84 format and is then converted to Cartesian coordinates. After converting the coordinates, we run a multilateration algorithm based on Bancroft’s Algorithm \cite{b5}. This algorithm makes use of differences in Times of Arrival (TOA) of a signal and locations of base stations (our nodes) to pinpoint the location of the sender of the signal. In our case, the signal is a sound wave and the velocity of a sound wave is 343 m/s. By using this, we can accurately obtain the Cartesian coordinates of where the sound originated and convert it back to GPS coordinates.
 
-
+\subsection {Data Usage}
+After Lambda generates the results we need, AWS doesn't give a simple way to do anything with the data. So to make the data useful, we incorporated two systems to make the data more readable. First, we implemented an alert system via AWS Simple Email Service (SES). SES allows us to create a mailing list that can be subscribed to. This is implemented in the Lambda function as python code and it calls the SES service which then emails the coordinates of the gunshots to anyone  subscribed. Secondly, we created a mapping system. Given the coordinates of the gunshot and using the gmplot library in python, we were able to create an html file that marks the location of the supposed gunshot location on a google map. These two systems allow the user to more actively visualize and use the data.
 
 \section{Time Synchronization}
 Initially, we were going to use the built in time stamps that go along with the LoRaWAN protocol. However, we soon realized that there could be inaccuracies on the order of seconds due to where the gunshot lies in the sliding window. If by chance, the gunshot is at the start of the window on one node and the end of a window on another node, we would detect a multiple second time difference, which is incorrect. 
@@ -156,36 +164,55 @@ We used a pretrained model called YAMNet  \cite{b6}. YAMNet is a pre-trained dee
 \end{itemize}
 The following paragraph, taken from YAMNet’s README explains training the model using this extracted data:
 \begin{quote}
-"These patches are then fed into the Mobilenet\_v1 model to yield a 3x2 array of activations for 1024 kernels at the top of the convolution. These are averaged to give a 1024-dimension embedding, then put through a single logistic layer to get the 521 per-class output scores corresponding to the 960 ms input waveform segment."
+"These patches are then fed into the Mobilenet\_v1 model to yield a 3x2 array of activations for 1024 kernels at the top of the convolution. These are averaged to give a 1024-dimension embedding, then put through a single logistic layer to get the 521 per-class output scores corresponding to the 960 ms input waveform segment." 
+
 \end{quote}
 
 
 \section{Results}
 
 
-\paragraph{Gunshot Detection}
-In order to test our false positive we decided to use Youtube audio. The most common cause of false gunshot detection is fireworks. We played a 10 minute video of nonstop fireworks going off and our system detected gunshots BLANK TIMES.
+\subsection{Gunshot Detection}
 
-To verify our system can detect real gunshots we visited the Los Angeles Gun Club. While there we ran our system for ten minutes and recorded the results. During those ten minutes a hundred-nineteen gunshots were fired. Our system successfully detected a hundred-thirteen of them and detected size of them as fireworks.
+
+
+\paragraph{False Negative}To verify our system can detect real gunshots we visited the Los Angeles Gun Club. While there we ran our system for ten minutes and recorded the results. During those ten minutes a hundred-nineteen gunshots were fired. Our system successfully detected a hundred-thirteen of them and only detected six of them as fireworks.
 
 
 \begin{table}[htbp]
 \caption{}
 \begin{center}
  \begin{tabular}{||c || c||} 
- \hline
-False Positive Rate &  \\ 
+
  \hline
 False Negative Rate & 0.0504\\
  \hline
 True Positive Rate &0.9496\\
  \hline
 \end{tabular}
-\label{tab1}
+\label{tab0}
 \end{center}
 \end{table}
 
-\paragraph{Triangulation}
+\paragraph{False Positive} In order to test our false positive we decided to use Youtube audio. The most common cause of false gunshot detection is fireworks. We played a 10 minute video of nonstop fireworks going off and checked to see if our system detected gunshots instead.
+
+As previously mentioned we decided to implement context filtering for firework audio. Without the context filtering our system detected gunshots four times out of a hundred-sixty-seven. However, if we implement context filtering we detect zero gunshots. Our false positive rates are detected in table  \ref{tab3} . On firework heavy holidays such as Fourth of July or Memorial Day context filtering can be applied to lower the false positive rate and then turned off afterwards. 
+\begin{table}[htbp]
+\caption{}
+\begin{center}
+ \begin{tabular}{||c || c||} 
+
+ \hline
+False Positve Rate without Context Filtering  & 0\%\\
+ \hline
+False Positve Rate with Context Filtering  & 2.395\%\\
+ \hline
+\end{tabular}
+\label{tab3}
+\end{center}
+\end{table}
+
+\subsection{Triangulation}
 We first tested the triangulation on AWS with fed data. As previously mentioned the triangulation function in Lambda is triggered when an S3 bucket is updated. Once triggered it will iterate through and pull device\_id, timestamp, lattitude, and longitude for each node. In order to test triangulation we had fixed data in the S3 lookup table for timestamp, lattitude, and longitude. The device\_ids are generated from Node-red.The values we put are reflected in table  \ref{tab1} and table  \ref{tab2}.
 
 
@@ -249,6 +276,14 @@ Our Lambda function successfully pulled in the  correct id's and coordinates. Fr
 
 When the coordinates are plotted we see that it is very close to the center of the three nodes which makes logical sense. The location is not perfect because minute changes in latitude and longitude map into a significant distance difference.
 
+\subsection{Combined System}
+We combined gunshot detection and triangulation and tested our full system within a small range. Three nodes were placed within a house and we played a gunshot sound. All three nodes detected the gunshot and sent their locations and timestamps to our AWS. From there our Lambda was triggered and we successfully sent an email with the longitude and latitude coordinates of the house.
+
+\section{Conclusion}
+We were able to implement a working prototype that constantly streams audio, performs predictions on the audio, streams to AWS, and sends alerts over email with the  likely location of where the gunshot occured. Our next steps would involve future testing.
+\section{Future Work}
+Ideally our system needs to be tested on a much larger scale where we would be able to place nodes on streetlamps along the neighborhood blocks. In addition we should attempt gunshot detection outdoors with real firearms. Our testing with live gunshots was done within a gun range where the shots themselves occured in relatively close proximity to our system. In actual implementation we would need more finetuning for the audio dectection sensitivity at a longer range.
+
 %
 %\begin{center}
 %\begin{tabular}{ c c c }
@@ -304,6 +339,7 @@ We would like to acknowledge our Internet and Cloud Computiong Professor, Dr. Yo
 
 \begin{thebibliography}{00}
 \bibitem{b1} Centers for Disease Control and Prevention, The Steady Rise Of U.S. Gun Deaths. statista.
+\bibitem{b7} I. Freire and J. Apolinario (2010). Gunshot detection in noisy environments.
 \bibitem{b2} L. G. Mazerolle, “Using gunshot detection technology in high-crime areas,” in Using gunshot detection technology in high-crime areas, 1998.
 
 
@@ -311,8 +347,11 @@ We would like to acknowledge our Internet and Cloud Computiong Professor, Dr. Yo
 \bibitem{b4}ShotSpotter, “PRICE PROPOSAL FOR SUBSCRIPTION-BASED SHOTSPOTTER®GUNFIRE LOCATION, ALERT AND ANALYSIS SERVICE FOR THE CITY OF DURHAM,” cityordinances.durhamnc.gov. [Online]. Available: https://cityordinances.durhamnc.gov/OnBaseAgendaOnline/Documents/
 ViewDocument/WS-Published Attachment - 13024 - PROPOSAL - 2 SPOTSHOTTER FOR DURHAM - 3\_18.pdf?meetingId=296\&documentType=Agenda\&itemId=10442\&pub
 lishId=47466\&isSection=false.
+\bibitem{b8}  G. Evangelopoulos, A. Zlatintsi, G. Skoumas, K. Rapantzikos, A. Potamianos, P. Maragos, Y. Avrithis, "Video event detection and summarization using audio visual and text saliency", Proc. IEEE Int. Conf. Acoust. Speech Signal Process., pp. 3553-3556, 2009-Apr.-19–24.
 \bibitem{b5} M. Geyer and A. Daskalakis, “Solving passive multilateration equations using Bancrofts algorithm,” 17th DASC. AIAA/IEEE/SAE. Digital Avionics Systems Conference. Proceedings (Cat. No.98CH36267).
 \bibitem{b6} D. Ellis and M. Plakal, "YAMNet", GitHub repository, Available: https://github.com/tensorflow/models/tree/master/research/audioset/yamnet
+
+
 
 \end{thebibliography}
 
