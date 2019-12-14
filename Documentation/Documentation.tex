@@ -147,11 +147,13 @@ To fix this, we normalize the clock on the Raspberry Pi to the Master clock runn
 
 \section{Machine Learning Model}
 We used a pretrained model called YAMNet  \cite{b6}. YAMNet is a pre-trained deep net that predicts an audio event class based on a the AudioSet-Youtube corpus (a massive collection of manually annotated audio samples). The following describes how YAMNet was trained: 
-    All audio is resampled to 16kHz mono
-    A spectrogram is computed using magnitudes of Short-Time Fourier Transform with a window size of 25ms, a window hop of 10ms, and a periodic Hann window
-    A mel spectrogram is computed by mapping the spectrogram to 64 mel bins covering the range 125-7500Hz
-    The stabilized log mel spectrogram is computed 
-    These features are framed with 50\% overlap. 
+\begin{itemize}
+    \item All audio is resampled to 16kHz mono
+    \item A spectrogram is computed using magnitudes of Short-Time Fourier Transform with a window size of 25ms, a window hop of 10ms, and a periodic Hann window
+    \item A mel spectrogram is computed by mapping the spectrogram to 64 mel bins covering the range 125-7500Hz
+    \item The stabilized log mel spectrogram is computed 
+  \item These features are framed with 50\% overlap. 
+\end{itemize}
 The following paragraph, taken from YAMNet’s README explains training the model using this extracted data:
 \begin{quote}
 "These patches are then fed into the Mobilenet\_v1 model to yield a 3x2 array of activations for 1024 kernels at the top of the convolution. These are averaged to give a 1024-dimension embedding, then put through a single logistic layer to get the 521 per-class output scores corresponding to the 960 ms input waveform segment."
