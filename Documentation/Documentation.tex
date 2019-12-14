@@ -160,12 +160,31 @@ The following paragraph, taken from YAMNet’s README explains training the mode
 
 \section{Results}
 
-\subsection{Testing Data}
 
 \paragraph{Gunshot Detection}
+In order to test our false positive we decided to use Youtube audio. The most common cause of false gunshot detection is fireworks. We played a 10 minute video of nonstop fireworks going off and our system detected gunshots BLANK TIMES.
+
+To verify our system can detect real gunshots we visited the Los Angeles Gun Club. While there we ran our system for ten minutes and recorded the results. During those ten minutes a hundred-nineteen gunshots were fired. Our system successfully detected a hundred-thirteen of them and detected size of them as fireworks.
+
+
+\begin{table}[htbp]
+\caption{}
+\begin{center}
+ \begin{tabular}{||c || c||} 
+ \hline
+False Positive Rate &  \\ 
+ \hline
+False Negative Rate & 0.0504\\
+ \hline
+True Positive Rate &0.9496\\
+ \hline
+\end{tabular}
+\label{tab1}
+\end{center}
+\end{table}
+
 \paragraph{Triangulation}
 We first tested the triangulation on AWS with fed data. As previously mentioned the triangulation function in Lambda is triggered when an S3 bucket is updated. Once triggered it will iterate through and pull device\_id, timestamp, lattitude, and longitude for each node. In order to test triangulation we had fixed data in the S3 lookup table for timestamp, lattitude, and longitude. The device\_ids are generated from Node-red.The values we put are reflected in table  \ref{tab1} and table  \ref{tab2}.
-
 
 
 
